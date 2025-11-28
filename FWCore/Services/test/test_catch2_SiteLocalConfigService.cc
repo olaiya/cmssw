@@ -4,7 +4,7 @@
 #include "FWCore/Utilities/interface/Exception.h"
 
 #define CATCH_CONFIG_MAIN
-#include "catch.hpp"
+#include "catch2/catch_all.hpp"
 
 TEST_CASE("Test SiteLocalConfigService", "[sitelocalconfig]") {
   std::string dirString;
@@ -26,7 +26,6 @@ TEST_CASE("Test SiteLocalConfigService", "[sitelocalconfig]") {
 
     edm::service::SiteLocalConfigService slc(pset);
 
-    CHECK(slc.trivialDataCatalogs()[0] == "trivialcatalog_file:/dummy/storage.xml?protocol=dcap");
     edm::CatalogAttributes tmp("DUMMY", "DUMMY_SUB_SITE", "DUMMY_CROSS_SITE", "CMSXrootdFederation", "XRootD");
     CHECK(slc.dataCatalogs()[0].site == tmp.site);
     CHECK(slc.dataCatalogs()[0].subSite == tmp.subSite);
@@ -83,7 +82,6 @@ TEST_CASE("Test SiteLocalConfigService", "[sitelocalconfig]") {
 
     edm::service::SiteLocalConfigService slc(pset);
 
-    CHECK(slc.trivialDataCatalogs()[0] == "trivialcatalog_file:/dummy/storage.xml?protocol=dcap");
     edm::CatalogAttributes tmp("DUMMY", "DUMMY_SUB_SITE", "DUMMY_CROSS_SITE", "CMSXrootdFederation", "XRootD");
     CHECK(slc.dataCatalogs()[0].site == tmp.site);
     CHECK(slc.dataCatalogs()[0].subSite == tmp.subSite);

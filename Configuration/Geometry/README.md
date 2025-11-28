@@ -60,9 +60,12 @@ The script also handles the common and forward elements of the geometry:
 * O7: 2021 with added material for muon shield
 * O8: as O4 with added material for muon shield
 * O9: as O5 with added material for muon shield
+* O10: as O7 with the material for IP to ZDC or ZDC to beyond as vacuum
 * F1: 2021 baseline
-* F2: same as F1 with modified file zdc.xmlfrom ZDC group
+* F2: same as F1 with modified file zdc.xml from ZDC group
 * F3: same as F2 with added simulti geometry for RPD
+* F4: same as F3 with corrected version of zdc.xml from ZDC group
+* F5: same as F4 with corrected diameter of the Fibre
 
 Several detector combinations have been generated:
 * 2021 = T3+C3+M13+P7+O7+F1
@@ -83,7 +86,7 @@ Several detector combinations have been generated:
 * 2024FlatMinus10Percent = T6+C2+M11+P7+O5+F2
 * 2024FlatPlus05Percent = T7+C2+M11+P7+O5+F2
 * 2024FlatPlus10Percent = T8+C2+M11+P7+O5+F2
-* 2025 = T3+C2+M17+P8+O7+F3
+* 2025 = T3+C2+M17+P8+O10+F5
 * 2025ZeroMaterial = T4+C2+M12+P8+O8+F3
 * 2025FlatMinus05Percent = T5+C2+M12+P8+O9+F3
 * 2025FlatMinus10Percent = T6+C2+M12+P8+O9+F3
@@ -161,6 +164,8 @@ Fast Timing system:
 * I18: Same as I17, needed for updated BTL numbering scheme and BTLDetId format
 * I19: BTL I18/v4, ETL v9 with 2024 full layout
 * I20: BTL I18/v4, ETL v10 with 2024 1.7 layout
+* I21: BTL I18/v4, ETL v11 with 2024 full layout, same as v9 with additional level and id for service hybrids
+* I22: BTL I18/v4, ETL v12 with 2024 1.7 layout, same as v10 with additional level and id for service hybrids
 
 The script also handles the common and forward elements of the geometry:
 *  O4: detailed cavern description, changes for modified CALO region for endcap part, no overlaps inside the Muon System 
@@ -209,3 +214,5 @@ Several detector combinations have been generated:
 * D121 = T35+C25+M16+I18+O10+F9  (Current Phase-2 baseline from CMSSW_15_1_0_pre4)
 * D122 = T35+C27+M16+I18+O10+F9 
 * D123 = T35+C28+M16+I18+O10+F9 
+* D124 = T35+C25+M16+I21+O10+F9
+* D125 = T35+C25+M16+I22+O10+F9

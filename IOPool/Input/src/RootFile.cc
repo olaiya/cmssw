@@ -563,9 +563,13 @@ namespace edm {
       processingOrderMerge(*processHistoryRegistry_, processingOrder);
       newReg->setProcessOrder(processingOrder);
 
-      // freeze the product registry
-      newReg->setFrozen(inputType != InputType::Primary);
-      productRegistry_.reset(newReg.release());
+      if (not processingOrder.empty()) {
+        // freeze the product registry
+        newReg->setFrozen(inputType != InputType::Primary);
+        productRegistry_.reset(newReg.release());
+      } else {
+        productRegistry_ = std::make_shared<ProductRegistry>();
+      }
     }
 
     // Set up information from the product registry.
@@ -626,6 +630,7 @@ namespace edm {
 
   RootFile::~RootFile() {}
 
+  bool RootFile::empty() const { return runTree_.entries() == 0; }
   void RootFile::readEntryDescriptionTree(EntryDescriptionMap& entryDescriptionMap, InputType inputType) {
     // Called only for old format files.
     // We use a smart pointer so the tree will be deleted after use, and not kept for the life of the file.
@@ -923,10 +928,10 @@ namespace edm {
 
   bool RootFile::wasFirstEventJustRead() const {
     IndexIntoFile::IndexIntoFileItr itr(indexIntoFileIter_);
-    int phIndex;
-    RunNumber_t run;
-    LuminosityBlockNumber_t lumi;
-    IndexIntoFile::EntryNumber_t eventEntry;
+    int phIndex = 0;
+    RunNumber_t run = 0;
+    LuminosityBlockNumber_t lumi = 0;
+    IndexIntoFile::EntryNumber_t eventEntry = 0;
     itr.skipEventBackward(phIndex, run, lumi, eventEntry);
     itr.skipEventBackward(phIndex, run, lumi, eventEntry);
     return eventEntry == IndexIntoFile::invalidEntry;

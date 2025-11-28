@@ -528,7 +528,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                                     nCellTracks,
                                                     ct,
                                                     *apc,
-                                                    tracks_view.quality(),
+                                                    tracks_view.quality().data(),
                                                     stack,
                                                     params.minHitsPerNtuplet_);
           ALPAKA_ASSERT_ACC(stack.empty());
@@ -635,7 +635,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
         tracks_view[it].quality() = Quality::strict;
 
-        if (cuts.strictCut(tracks_view, it))
+        if (cuts.strictCut(tracks_view, nhits, it))
           continue;
 
         tracks_view[it].quality() = Quality::tight;
