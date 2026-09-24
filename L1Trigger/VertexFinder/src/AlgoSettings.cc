@@ -17,6 +17,7 @@ namespace l1tVertexFinder {
         vx_DoTightChi2_(vertex_.getParameter<bool>("FH_DoTightChi2")),
         vx_histogram_parameters_(vertex_.getParameter<std::vector<double> >("FH_HistogramParameters")),
         vx_manny_histogram_parameters_(vertex_.getParameter<std::vector<double> >("Manny_HistogramParameters")),
+        vx_manny_inputVarScaleFactors_(vertex_.getParameter<std::vector<double> >("Manny_InputVarScaleFactors")),
         vx_nvtx_(vertex_.getParameter<unsigned int>("FH_NVtx")),
         vx_width_(vertex_.getParameter<double>("FH_VertexWidth")),
         vx_windowSize_(vertex_.getParameter<unsigned int>("FH_WindowSize")),

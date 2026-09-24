@@ -442,9 +442,9 @@ namespace l1tVertexFinder {
     }
   }
 
-  void VertexFinder::Manny(tensorflow::Session* firstSesh, tensorflow::Session* secondSesh) {
+  void VertexFinder::Manny(tensorflow::Session* firstSesh, tensorflow::Session* secondSesh) {//remove secondSesh, I don't use it
     // Stub implementation for Manny algorithm
-    RecoVertex leading_vertex;
+    RecoVertex leading_vertex; //collection of tracks. Can set the Z vertex of the collection of tracks and the sumPt. The sumPt in my case is the probability
 
     if (settings_->debug() > 0) {
       edm::LogInfo("VertexFinder") << "Manny::Algorithm called with " << fitTracks_.size() << " tracks";
@@ -455,46 +455,165 @@ namespace l1tVertexFinder {
       return;
     }
 
-    // #### Weight Tracks: ####
-    // Loop over tracks -> weight the network -> set track weights
-    tensorflow::Tensor inputTrkWeight(tensorflow::DT_FLOAT, {1, 3});  // Single batch of 3 values
-    uint counter = 0;
+    //Neural Net accepts 3 track inputs
+    tensorflow::Tensor trkInputs(tensorflow::DT_FLOAT, {1, 3});  // Single batch of 3 values
 
-    for (auto& track : fitTracks_) {
-      // For Simulation precision, use direct float values (not ap_fixed types)
-      float trackPt = track.pt();
-      float trackEta = std::abs(track.eta());
-      float trackMVA = track.getTTTrackPtr()->getMVAQualityBits();
+    //Neural Net has a hidden layer, the output of this layer is summed for each track.
+    //This is the number of nodes in this layer. It needs to be configurable in a parameter file rather than hardwired like below
+    const int numberOfSummingNodes = 10;
+    //Define layer of summing nodes
+    tensorflow::Tensor summedHiddenLayer(tensorflow::DT_FLOAT, {1, numberOfSummingNodes}); // single batch of numberOfSummingNodes nodes
+    std::vector<tensorflow::Tensor> outputVtxVals; //output of the Neural Net
 
-      inputTrkWeight.tensor<float, 2>()(0, 0) = trackPt;
-      inputTrkWeight.tensor<float, 2>()(0, 1) = trackMVA;
-      inputTrkWeight.tensor<float, 2>()(0, 2) = trackEta;
+    //Need to loop over bins. 
+    const float binWidth = settings_->vx_manny_histogram_interval(); //check that this really is the binWidth
+    std::vector<float> binVertexCalc(settings_->vx_manny_histogram_numbins(), 0);
+    std::vector<float> binVertexProb(settings_->vx_manny_histogram_numbins(), 0);
 
-      // Run first session: track weight
-      std::vector<tensorflow::Tensor> outputTrkWeight;
-      tensorflow::run(firstSesh, {{"NNvtx_input_track_weight:0", inputTrkWeight}}, {"Identity:0"}, &outputTrkWeight);
+    bool needToCheckNumberOfSummingNodes(true);//Bool to decide when tp check the number of nodes
+    const int numBins = int(settings_->vx_manny_histogram_numbins());//Number of bins in the histogram
+    float minBin = settings_->vx_manny_histogram_min();
 
-      // Set track weight
-      float trackWeight = outputTrkWeight[0].tensor<float, 2>()(0, 0);
-      track.setWeight(trackWeight);
+    //Scaling values that were used to scale the inputs during training. I should look into folding these scale factors into the models weights
+    std::vector<double> inputScaleFactors = settings_->vx_manny_inputVarScaleFactors();
+    const float zScaling(float(inputScaleFactors.at(0)));
+    const float ptScaling(float(inputScaleFactors.at(1)));
+    const float etaScaling(float(inputScaleFactors.at(2)));
 
-      if (settings_->debug() > 2) {
-        edm::LogInfo("VertexFinder") << "Manny::Track " << counter << " pt=" << trackPt << " eta=" << trackEta
-                                     << " MVA=" << trackMVA << " weight=" << trackWeight;
+    //Loop over number of bins. Calculate the vertex position and vertex probability for each bin.
+    for (int z = 0; z < numBins; z += 1) {
+
+      float vertexValueInBin(0);
+      float vertexProbInBin(0);
+
+      float lowerBin = (z * binWidth) + minBin;
+      float upperBin = ((z + 2) * binWidth) + minBin; //Adjacent bins overlap by binwidth. binwidth is half of our defined bins
+      
+      //std::cout << "LowerBin: " << lowerBin << ". UpperBin: " << upperBin << std::endl;
+
+      //Initiate summing nodes of the neural net
+      for (int node = 0; node < numberOfSummingNodes; ++node){
+        summedHiddenLayer.tensor<float, 2>()(0,node) = 0; 
       }
+      int tCounter(0);
+      for (auto& track : fitTracks_) {//loop over tracks
+        
+        // For Simulation precision, use direct float values (not ap_fixed types)
+        float trackPt = track.pt();
+        float trackEta = std::abs(track.eta());
+        float trackZ = track.getTTTrackPtr()->z0();
 
-      ++counter;
-    }
+        //std::cout << "TRACK " << tCounter << ". Z: " << trackZ << ". LowerBin: " << lowerBin << ". UpperBin: " << upperBin << std::endl;
+        ++tCounter;
+        
+        if ((trackZ >= lowerBin) && (trackZ < upperBin)) {//select tracks that are within the bin
+          
+          //Set track z value with respect to the bin centre. This is what is input into the NN
+          float binMidPoint = (lowerBin + upperBin)/2;
+          trackZ = trackZ - binMidPoint;
 
-    // TODO: Implement vertex finding logic using secondSesh
-    // This is a placeholder - the actual vertex finding algorithm needs to be implemented
-    if (settings_->debug() > 0) {
-      edm::LogInfo("VertexFinder") << "Manny::Processed " << counter << " tracks, vertex finding not yet implemented";
-    }
+          //Fill the input tensor
+          //Scale the values using scaling values used for training. To do: factor the scale factors in with the input weights of the NN
+          trkInputs.tensor<float, 2>()(0, 0) = trackZ/zScaling; //deltaZ is the input
+          trkInputs.tensor<float, 2>()(0, 1) = 1.0/(trackPt*ptScaling); //I use 1/pt rather than pt as an input
+          trkInputs.tensor<float, 2>()(0, 2) = trackEta/etaScaling;
 
-    leading_vertex.setZ0(0.0);
+          std::vector<std::pair<string, tensorflow::Tensor>> inputs = {
+            {"hidden_state:0", summedHiddenLayer},
+            {"x:0", trkInputs}
+          };
+    
+          //Define output names and storage
+          //Names of the output tensors/nodes to fetch. You have to know the names. Ie look in your model for the names
+          std::vector<std::string> output_node_names = {"Identity:0", "Identity_1:0", "Identity_2:0"};
+          //"Identity:0" = vertex position calc
+          //"Identity_1:0" = vertex bin probability
+          //"Identity_2:0" = summed hidden state
+
+          // Run the session with multiple inputs
+          tensorflow::run(firstSesh, inputs, output_node_names, &outputVtxVals);
+          // Run session: return vertex position and vertex prob based on accumulated track information
+
+          // Set calculated vertex and PV probability for each bin 
+          //Need to capture vertex calc, vertex probability and hidden layer output from the output of running tensorflow on firstSesh. (outputVtxVals)
+          const tensorflow::Tensor& first_returned_tensor = outputVtxVals[0]; //vertex postion within bin
+          const tensorflow::Tensor& second_returned_tensor = outputVtxVals[1];//probability bin is the correct PV bin
+          const tensorflow::Tensor& third_returned_tensor = outputVtxVals[2]; //Output of summed layer
+
+          auto vertexVal_matrix = first_returned_tensor.tensor<float, 2>(); //Need to know in advance that this outputs a rank 2 matrix. first index is the batch and the second index is the value. You would need to access the matrix and print its shape
+          auto vertexProb_matrix = second_returned_tensor.tensor<float, 2>(); //Need to know in advance that this outputs a rank 2 matrix
+          //Can also access the output using the following
+          //auto mat = third_returned_tensor.matrix<float>();
+          //float nodeValue = mat(0,node)
+
+          //Store intermediary vertex value and vertex prob for bin
+          vertexValueInBin = vertexVal_matrix(0,0); //vertexVal_matrix(i,j). i is the batch number and j is the variable index. 
+          vertexProbInBin = vertexProb_matrix(0,0);
+
+          //Need to check size of the outputted hidden layer is the size of numberOfSummingNodes
+          if (needToCheckNumberOfSummingNodes){
+            auto shape = third_returned_tensor.shape();
+            int numHiddenLayers = shape.dim_size(1); 
+            if (numberOfSummingNodes != numHiddenLayers) {//Don't want to check this for every track 
+              std::cerr << "Number of summed nodes is: " << numHiddenLayers << ", expected number is: " << numberOfSummingNodes << std::endl; 
+            } else {
+              needToCheckNumberOfSummingNodes = false;
+            } 
+          }
+
+          //assign summedHiddenLayer with the output of the third tensor returned from the model
+          for (int node = 0; node < numberOfSummingNodes; ++node){
+            summedHiddenLayer.tensor<float, 2>()(0,node) = outputVtxVals[2].tensor<float, 2>()(0, node);
+            //std::cout << "Node: " << node << " is: " << outputVtxVals[2].tensor<float, 2>()(0, node) << std::endl;//Node index 6 always seems to be 0!
+          }
+
+          //Check if the file opened successfully
+          /*if (outFile.is_open()) {
+              // 3. Write data to the file
+              outFile << "outputVtxVals.size() is:"  << std::endl;
+              outFile  << outputVtxVals.size() << std::endl;
+              auto shape = first_returned_tensor.shape();
+              outFile << "first shape is: " << shape.dim_size(0) << ", " << shape.dim_size(1) << std::endl;
+              
+          } else {
+              std::cerr << "Unable to open file" << std::endl;
+          }*/
+        }//end of bin region selection
+       
+        if (settings_->debug() > 2) {
+          edm::LogInfo("VertexFinder") << "Manny::Track -  pt=" << trackPt << " eta=" << trackEta
+                                      << " Z=" << trackZ;
+        }
+      }//end of loop over tracks
+
+      //Fill vectors to store vertex value and probability for each bin
+      binVertexCalc[z] = vertexValueInBin;
+      binVertexProb[z] = vertexProbInBin;
+    }//end of loop over bins
+
+    //Find iterator pointing to the bin most likely to contain the primary vertex
+    auto max_it = std::max_element(binVertexProb.begin(), binVertexProb.end());
+    //Convert iterator to an index
+    int binIndex = std::distance(binVertexProb.begin(), max_it);//Index of the primary vertex
+    //Use index to retrieve the corresponding vertex value and fill the leading_vertex with it
+    float vertexDeltaFromBinMidpoint = binVertexCalc[binIndex];
+    //Remember vertexDelta is the position of the vertex with respect to the centre of the bin
+    //To translate this to a z vertex value we need to find the z postion of the midpoint of the bin corresponding to the z vertex
+    float lowerBinBoundary = (binIndex * binWidth) + minBin;
+    float upperBinBoundary = ((binIndex + 2) * binWidth) + minBin; 
+    float binMidPoint = (lowerBinBoundary + upperBinBoundary)/2;
+
+    float pvZvalue = binMidPoint + vertexDeltaFromBinMidpoint;//primary vertex z value
+    //cout << "Primary vertex is: " << pvZvalue << std::endl;
+
+    leading_vertex.setZ0(pvZvalue);
     vertices_.emplace_back(leading_vertex);
     pv_index_ = 0;  // by default Manny algorithm finds only hard PV
+    // Questions:
+    //gttTrack.getTTTrackPtr()->z0() is this method the correct way to access the track z position
+    //check float binWidth = settings_->vx_manny_histogram_interval() really is the bin width
+    //More efficient to loop over tracks then loop over bins within tracks. Be careful with overlapping bins
+
   }
 
   void VertexFinder::findPrimaryVertex() {

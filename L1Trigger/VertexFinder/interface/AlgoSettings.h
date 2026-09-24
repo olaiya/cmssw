@@ -66,8 +66,9 @@ namespace l1tVertexFinder {
     double vx_manny_histogram_max() const { return vx_manny_histogram_parameters_.at(1); }
     double vx_manny_histogram_interval() const { return vx_manny_histogram_parameters_.at(2); }
     int vx_manny_histogram_numbins() const {
-      return (vx_manny_histogram_parameters_.at(1) - vx_manny_histogram_parameters_.at(0)) / vx_manny_histogram_parameters_.at(2);
+      return (((vx_manny_histogram_parameters_.at(1) - vx_manny_histogram_parameters_.at(0)) / vx_manny_histogram_parameters_.at(2))-1);
     }
+    std::vector<double> vx_manny_inputVarScaleFactors() const { return vx_manny_inputVarScaleFactors_;}
     // fastHisto assumed vertex width
     float vx_width() const { return vx_width_; }
     // fastHisto track selection control
@@ -127,6 +128,7 @@ namespace l1tVertexFinder {
     bool vx_DoTightChi2_;
     std::vector<double> vx_histogram_parameters_;
     std::vector<double> vx_manny_histogram_parameters_;
+    std::vector<double> vx_manny_inputVarScaleFactors_;
     unsigned int vx_nvtx_;
     float vx_width_;
     unsigned int vx_windowSize_;

@@ -8,7 +8,7 @@ l1tVertexProducer = cms.EDProducer('VertexProducer',
   # === Vertex Reconstruction configuration
   VertexReconstruction = cms.PSet(
         # Vertex Reconstruction Algorithm
-        Algorithm = cms.string("fastHisto"),
+        Algorithm = cms.string("Manny"), # Options: "Agglomerative", "fastHisto", "fastHistoEmulation", "Kmeans", "DBSCAN", "Manny"
         # Vertex distance [cm]
         VertexDistance = cms.double(.15),
         # Assumed Vertex Resolution [cm]
@@ -37,8 +37,9 @@ l1tVertexProducer = cms.EDProducer('VertexProducer',
         # Track word limits (128 binns): [-20.46912512, 20.46912512, 0.31983008]
         # Track word limits (256 binns): [-20.46912512, 20.46912512, 0.15991504]
         FH_HistogramParameters = cms.vdouble(-20.46912512, 20.46912512, 0.15991504),
-        # Manny algorithm histogram parameters (min,max,width) [cm]
-        Manny_HistogramParameters = cms.vdouble(-20.46912512, 20.46912512, 0.15991504),
+        # Manny algorithm histogram parameters (min,max,binoverlap) [cm] bins are 2 x binoverlap wide. Bins overlap 50% with adjacent bins. 
+        Manny_HistogramParameters = cms.vdouble(-20.5, 20.5, 0.25),
+        Manny_InputVarScaleFactors = cms.vdouble(0.14450525, 0.111401, 1.3794129),#z, 1/pt and eta input scale factors 
         # The number of vertixes to return (i.e. N windows with the highest combined pT)
         FH_NVtx = cms.uint32(1),
         # fastHisto algorithm assumed vertex half-width [cm]
