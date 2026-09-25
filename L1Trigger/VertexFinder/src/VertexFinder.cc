@@ -442,7 +442,7 @@ namespace l1tVertexFinder {
     }
   }
 
-  void VertexFinder::Manny(tensorflow::Session* firstSesh, tensorflow::Session* secondSesh) {//remove secondSesh, I don't use it
+  void VertexFinder::Manny(tensorflow::Session* firstSesh) {
     // Stub implementation for Manny algorithm
     RecoVertex leading_vertex; //collection of tracks. Can set the Z vertex of the collection of tracks and the sumPt. The sumPt in my case is the probability
 
@@ -450,7 +450,7 @@ namespace l1tVertexFinder {
       edm::LogInfo("VertexFinder") << "Manny::Algorithm called with " << fitTracks_.size() << " tracks";
     }
 
-    if (firstSesh == nullptr || secondSesh == nullptr) {
+    if (firstSesh == nullptr) {
       edm::LogWarning("VertexFinder") << "Manny::TensorFlow sessions are null, skipping algorithm";
       return;
     }

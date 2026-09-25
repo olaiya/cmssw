@@ -34,7 +34,6 @@ namespace l1tVertexFinder {
         vx_trkw_graph_(vertex_.getParameter<edm::FileInPath>("TrackWeightGraph")),
         vx_pattrec_graph_(vertex_.getParameter<edm::FileInPath>("PatternRecGraph")),
         vx_manny_first_graph_(vertex_.getParameter<edm::FileInPath>("MannyFirstGraph")),
-        vx_manny_second_graph_(vertex_.getParameter<edm::FileInPath>("MannySecondGraph")),
         // Debug printout
         debug_(iConfig.getParameter<unsigned int>("debug")) {
     const std::string algoName(vertex_.getParameter<std::string>("Algorithm"));
