@@ -38,7 +38,7 @@ l1tVertexProducer = cms.EDProducer('VertexProducer',
         # Track word limits (256 binns): [-20.46912512, 20.46912512, 0.15991504]
         FH_HistogramParameters = cms.vdouble(-20.46912512, 20.46912512, 0.15991504),
         # Manny algorithm histogram parameters (min,max,binoverlap) [cm] bins are 2 x binoverlap wide. Bins overlap 50% with adjacent bins. 
-        Manny_HistogramParameters = cms.vdouble(-20.5, 20.5, 0.25),
+        Manny_HistogramParameters = cms.vdouble(-20.5, 20.5, 0.5),
         Manny_InputVarScaleFactors = cms.vdouble(0.14450525, 0.111401, 1.3794129),#z, 1/pt and eta input scale factors 
         # The number of vertixes to return (i.e. N windows with the highest combined pT)
         FH_NVtx = cms.uint32(1),
@@ -76,8 +76,6 @@ l1tVertexProducer = cms.EDProducer('VertexProducer',
         PatternRecGraph = cms.FileInPath("L1Trigger/VertexFinder/data/NNVtx_PatternModelGraph.pb"),
         # Manny algorithm first network graph
         MannyFirstGraph = cms.FileInPath("L1Trigger/VertexFinder/data/Manny_FirstModelGraph.pb"),
-        # Manny algorithm second network graph
-        MannySecondGraph = cms.FileInPath("L1Trigger/VertexFinder/data/Manny_SecondModelGraph.pb"),
     ),
   # Debug printout
   debug  = cms.uint32(0)
